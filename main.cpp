@@ -63,10 +63,10 @@ private:
     sf::Color color;
     unsigned int* width_ref;
     unsigned int* height_ref;
-    int f;
+    float f;
 public:
     ImagePlane(){}
-    ImagePlane(unsigned int* width, unsigned int* height, int f)
+    ImagePlane(unsigned int* width, unsigned int* height, float f)
     {
         this->width_ref = width;
         this->height_ref = height;
@@ -86,19 +86,43 @@ public:
         return *height_ref;
     }
 
-    void moveFocalPoint(int distance)
+    sf::Vector3f center()
+    {
+        return sf::Vector3f(*width_ref/2, *height_ref/2, f);
+    }
+
+    void moveFocalPoint(float distance)
     {
         f += distance;
     }
 
-    void setFocalPoint(int focalPoint)
+    void setFocalPoint(float focalPoint)
     {
         f = focalPoint;
     }
 
-    void get_transformation()
+    sf::Transform get_transformation(float z)
     {
-        
+        /**
+         Traslation + Scale + InvTraslation
+         
+          [[1, 0, -x_0]  [[f/z, 0, x_0]  [[1, 0,   x_0]
+           [0, 1, -y_0] * [0, f/z, y_0] * [0, 1,   y_0]
+           [0, 0,   1]]   [0, 0,     1]]  [0, 0,     1]]
+          =
+          [[f/z,   0, f*x_0/z - x_0]
+           [  0, f/z, f*y_0/z - y_0]
+           [  0,   0,             1]]         
+         **/
+
+        float x_0, y_0, f;
+        x_0 = center().x;
+        y_0 = center().y;
+        f = center().z;
+
+        return sf::Transform(f/z,   0, x_0*f/z - x_0,
+                               0, f/z, y_0*f/z - y_0,
+                               0,   0,             1);
     }
 };
 
