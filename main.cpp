@@ -142,11 +142,17 @@ public:
     sf::Transform get_transformation(float z)
     {
         /**
+         * 
+         * Rotation
+        [-sin(omega)*sin(phi)*sin(theta) + cos(phi)*cos(theta), -sin(omega)*sin(theta)*cos(phi) - sin(phi)*cos(theta), sin(theta)*cos(omega)],
+        [                                  sin(phi)*cos(omega),                                   cos(omega)*cos(phi),            sin(omega)],
+        [-sin(omega)*sin(phi)*cos(theta) - sin(theta)*cos(phi), -sin(omega)*cos(phi)*cos(theta) + sin(phi)*sin(theta), cos(omega)*cos(theta)]])
+
          Traslation + Rotation_x + Rotation_y + Rotation_z + Scale + InvTraslation
          
-          [[1, 0, -x_0]  [[f/z, 0, x_0]  [[1, 0,   x_0]
-           [0, 1, -y_0] * [0, f/z, y_0] * [0, 1,   y_0]
-           [0, 0,   1]]   [0, 0,     1]]  [0, 0,     1]]
+          [[1, 0, -x_0]  [[f/z, 0, 0]   [[1, 0,   x_0]
+           [0, 1, -y_0] * [0, f/z, 0] * [0, 1,   y_0]
+           [0, 0,   1]]   [0, 0,   1]]  [0, 0,     1]]
           =
           [[f/z,   0, f*x_0/z - x_0]
            [  0, f/z, f*y_0/z - y_0]
