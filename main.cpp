@@ -8,25 +8,19 @@
 class VanishPoint {
 private:
     sf::Vector2f position;
-    const sf::Color color;
-    const int radius;
+    sf::Color color = sf::Color::Red;
+    int radius = 4;
 public:
     VanishPoint() {
         this->position = sf::Vector2f(0,0);
-        this->color = sf::Color::Red;
-        this->radius = 4;
     }
 
     VanishPoint(int x, int y) {
         this->position = sf::Vector2f(x, y);
-        this->color = sf::Color::Red;
-        this->radius = 4;
     }
 
     VanishPoint(sf::Vector2f pos) {
         this->position = pos;
-        this->color = sf::Color::Red;
-        this->radius = 4;
     }
 
     void move(sf::Vector2f direction) {
@@ -66,50 +60,63 @@ public:
 class ImagePlane
 {
 private:
-    const sf::Color color;
-    sf::Vector3f center;
+    sf::Color color = sf::Color::Green;
     unsigned int* width_ref;
     unsigned int* height_ref;
-    VanishPoint vanish_point_projection;
     float f;
     sf::Vector3f rotation;
     float* theta;    // rotation x
     float* phi;      // rotation y
     float* omega;    // rotation z
 public:
+    VanishPoint vanish_point_projection;
     ImagePlane(){}
+    ~ImagePlane(){}
+
     ImagePlane(unsigned int* width, unsigned int* height, float f, sf::Vector3f rotation_)
     {
         this->width_ref = width;
         this->height_ref = height;
         this->f = f;
-        this->color = sf::Color::Green;
         
         this->rotation = sf::Vector3f();
         this->theta = &(this->rotation.x);
         this->phi   = &(this->rotation.y);
         this->omega = &(this->rotation.z);
 
-        this->vanish_point_projection = VanishPoint();
-
         setRotation(rotation_);
     }
-    ~ImagePlane(){}
 
-    unsigned int width()
-    {
-        return *width_ref;
+    ImagePlane& operator=(const ImagePlane& img) {
+        this->width_ref = img.width_ref;
+        this->height_ref = img.height_ref;
+        this->f = img.f;
+        
+        this->rotation = sf::Vector3f();
+        this->theta = &(this->rotation.x);
+        this->phi   = &(this->rotation.y);
+        this->omega = &(this->rotation.z);
+
+        this->setRotation(img.rotation);
+
+        return *this;
     }
 
-    unsigned int height()
-    {
-        return *height_ref;
-    }
+    unsigned int width() { return *width_ref; }
 
-    sf::Vector3f center()
-    {
-        return sf::Vector3f(*width_ref/2, *height_ref/2, f);
-    }
+    unsigned int height() { return *height_ref; }
+
+    sf::Vector3f center() { return sf::Vector3f(*width_ref/2, *height_ref/2, f); }
+
+    float center_x() { return *width_ref/2; }
+
+    float center_y() { return *height_ref/2; }
+
+    float center_z() { return f; }
+
+    sf::Vector3f getRotation() { return rotation; }
+
+    float getFocalPoint() { return f; }
 
     void setRotation(sf::Vector3f rotation)
     {
@@ -117,27 +124,20 @@ public:
         this->rotation.y = rotation.y;
         this->rotation.z = rotation.z;
 
-        vanish_point_projection.set(f*tan(rotation.x));
-        vanish_point_projection.set(f*tan(rotation.y));
+        vanish_point_projection.set(f*tan(rotation.x) + center_x(), f*tan(rotation.y) + center_y());
     }
 
     void setVanishPoint(sf::Vector2f vanish_point)
     {
         this->vanish_point_projection.set(vanish_point);
 
-        this->rotation.x = atan(vanish_point.x / f);
-        this->rotation.y = atan(vanish_point.y / f);
+        this->rotation.x = atan((vanish_point.x - center_x())/ f);
+        this->rotation.y = atan((vanish_point.y - center_y())/ f);
     }
 
-    void moveFocalPoint(float distance)
-    {
-        f += distance;
-    }
+    void moveFocalPoint(float distance) { f += distance; }
 
-    void setFocalPoint(float focalPoint)
-    {
-        f = focalPoint;
-    }
+    void setFocalPoint(float focalPoint) { f = focalPoint; }
 
     sf::Transform get_transformation(float z)
     {
@@ -154,9 +154,9 @@ public:
          **/
 
         float x_0, y_0, f;
-        x_0 = center().x;
-        y_0 = center().y;
-        f = center().z;
+        x_0 = center_x();
+        y_0 = center_y();
+        f = center_z();
 
         return sf::Transform(f/z,   0, x_0*f/z - x_0,
                                0, f/z, y_0*f/z - y_0,
@@ -176,7 +176,7 @@ class Render
     {
 
     }
-}
+};
 
 class Layer
 {
@@ -195,10 +195,11 @@ private:
     unsigned int* height_ref;
     unsigned int* depth_ref;
 
+    /*
     Render render(const ImagePlane &image_plane)
     {
 
-    }
+    }*/
 public:
     Background(){}
     ~Background(){}
@@ -212,7 +213,7 @@ public:
         this->center = sf::Vector3f(*width/2, *height/2, *depth);
     }
 
-    void draw(sf::RenderWindow &window, )
+    void draw(sf::RenderWindow &window)
     {
 
     }
@@ -232,32 +233,31 @@ private:
     ImagePlane image_plane;
     std::vector<Layer> hidden_layers;
     Background background;
-    VanishPoint vanish_point;
 
 public:
-    Space(unsigned int width,unsigned int height,unsigned int depth)
+    Space(unsigned int width,unsigned int height,unsigned int depth, float f)
     {
         this->width = width;
         this->height = height;
         this->depth = depth;
-        this->vanish_point = VanishPoint(sf::Vector2f(width/2, height/2));
         this->background = Background(&(this->width),&(this->height), &(this->depth));
-    }
-
-    void moveVanishPoint(sf::Vector2f direction)
-    {
-        this->vanish_point.move(direction);
+        this->image_plane = ImagePlane(&(this->width), &(this->height), f, sf::Vector3f(0,0,0));
     }
 
     void setVanishPoint(sf::Vector2f position)
     {
-        this->vanish_point.set(position);
+        this->image_plane.setVanishPoint(position);
     }
 
     void draw(sf::RenderWindow &window)
     {
         // Draw vanish point
-        vanish_point.draw(window);
+        image_plane.vanish_point_projection.draw(window);
+
+        sf::Vector3f rotation = image_plane.getRotation();
+        std::cout << "Image Center: (" << image_plane.center_x() << ", " << image_plane.center_y() << ", " << image_plane.center_z() << ") ";
+        std::cout << "Focal Point: " << image_plane.getFocalPoint() << " ";
+        std::cout << "Rotation: (" << rotation.x << ", " << rotation.y << ", " << rotation.z << ")\n";
     }
 
 };
@@ -265,8 +265,9 @@ public:
 int main()
 {
     int width=600, height=600, depth=300;
+    float f = 100;
 
-    Space space(width, height, depth);
+    Space space(width, height, depth, f);
 
     // Create the main window
     sf::RenderWindow window(sf::VideoMode(width, height), "SFML window");
@@ -277,11 +278,11 @@ int main()
         sf::Event event;
         while (window.pollEvent(event))
         {
-            /*
+            
             if (event.type == sf::Event::MouseMoved)
             {
                 space.setVanishPoint(sf::Vector2f(event.mouseMove.x, event.mouseMove.y));
-            }*/
+            }
 
             // Close window: exit
             if (event.type == sf::Event::Closed)
